@@ -1,0 +1,28 @@
+# Dependencies
+frontend/node_modules/
+/package-lock.json
+
+# Build outputs
+frontend/dist/
+backend/target/
+target/
+
+# Local runtime files
+uploads/
+*.log
+frontend/*.log
+
+# Local IDE/system files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local secrets/config
+backend/src/main/resources/application.yml
+.env
+.env.*
+
+# Generated binary documents
+docs/*.docx

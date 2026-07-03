@@ -1,0 +1,143 @@
+/* ============================================
+   青青社区 · 设计令牌系统（共享）
+   两端共享的基础变量、复位、字体、动效约束
+   ============================================ */
+
+:root {
+  /* —— 管理端：档案室（章戳红 + 米白纸 + 墨字）—— */
+  --admin-paper:        #F7F4EC;
+  --admin-paper-soft:   #FBF8F1;
+  --admin-surface:      #FFFFFF;
+  --admin-ink:          #1B1F24;
+  --admin-ink-soft:     #4A4F57;
+  --admin-muted:        #6B6F76;
+  --admin-faint:        #9CA3AF;
+  --admin-line:         #E6DFCE;
+  --admin-line-soft:    #EFE9DA;
+  --admin-stamp:        #B23B2A;     /* 章戳红 主强调 */
+  --admin-stamp-soft:   rgba(178,59,42,0.08);
+  --admin-stamp-line:   rgba(178,59,42,0.18);
+  --admin-amber:        #C97A3F;     /* 待审/进行中 */
+  --admin-amber-soft:   rgba(201,122,63,0.10);
+  --admin-green:        #3F8359;     /* 通过/完成 */
+  --admin-green-soft:   rgba(63,131,89,0.10);
+  --admin-blue:         #3F5C8A;     /* 信息/链接 */
+  --admin-blue-soft:    rgba(63,92,138,0.08);
+
+  /* —— 用户端：社区便利贴（公园绿 + 香槟金 + 奶白）—— */
+  --user-bg:            #FAF7EE;
+  --user-bg-soft:       #F4EFDF;
+  --user-surface:       #FFFFFF;
+  --user-surface-warm:  #FCFAF3;
+  --user-ink:           #1F2A26;
+  --user-ink-soft:      #4A554F;
+  --user-muted:         #6B7670;
+  --user-faint:         #A4ADA7;
+  --user-line:          #ECE4D0;
+  --user-line-soft:     #F4EEDF;
+  --user-brand:         #2E5D4F;     /* 公园绿 主品牌 */
+  --user-brand-deep:    #1E443A;
+  --user-brand-soft:    rgba(46,93,79,0.08);
+  --user-gold:          #C9A24A;     /* 香槟金 强调 */
+  --user-gold-soft:     rgba(201,162,74,0.12);
+
+  /* 业务图钉色（仅图钉/边角，不大面积铺）*/
+  --pin-errand:         #C45B3F;
+  --pin-repair:         #4061A6;
+  --pin-goods:          #C97A3F;
+  --pin-forum:          #6B5B95;
+
+  /* 字体 */
+  --font-display:  'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  --font-display-en: 'Fraunces', 'Noto Serif SC', serif;
+  --font-body:     'Inter', 'Manrope', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:     'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* 字号阶（type scale）*/
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-base: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 30px;
+  --fs-4xl: 40px;
+  --fs-5xl: 56px;
+
+  /* 间距阶 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* 圆角 */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 24px;
+  --r-pill: 999px;
+
+  /* 阴影 */
+  --shadow-hairline: 0 0 0 1px rgba(27,31,36,0.05);
+  --shadow-soft:     0 2px 8px rgba(27,31,36,0.04), 0 0 0 1px rgba(27,31,36,0.04);
+  --shadow-raised:   0 8px 24px rgba(27,31,36,0.08), 0 0 0 1px rgba(27,31,36,0.04);
+  --shadow-float:    0 18px 40px rgba(27,31,36,0.10), 0 4px 12px rgba(27,31,36,0.06);
+
+  /* 动效 */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --d-fast: 150ms;
+  --d-base: 220ms;
+  --d-slow: 320ms;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  color: var(--admin-ink);
+  background: var(--admin-paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+}
+
+button { font-family: inherit; }
+
+::selection {
+  background: rgba(178,59,42,0.18);
+  color: var(--admin-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--admin-stamp);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* 字体工具类 */
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); font-feature-settings: 'tnum'; }
+.tabular      { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,47 @@
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
+import router from '@/router'
+
+const api = axios.create({
+  baseURL: '/api',
+  timeout: 30000
+})
+
+// 请求拦截器
+api.interceptors.request.use(
+  config => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  error => Promise.reject(error)
+)
+
+// 响应拦截器
+api.interceptors.response.use(
+  response => {
+    return response
+  },
+  error => {
+    if (error.response) {
+      const { status, data } = error.response
+      if (status === 401) {
+        ElMessage.error('登录已过期，请重新登录')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        router.push('/login')
+      } else if (status === 403) {
+        ElMessage.error('无权限访问')
+      } else {
+        ElMessage.error(data?.message || '请求失败')
+      }
+    } else {
+      ElMessage.error('网络错误')
+    }
+    return Promise.reject(error)
+  }
+)
+
+export default api
