@@ -56,6 +56,44 @@ const TOTAL_DURATION = 3400
 const EXIT_DURATION = 360
 const progressDuration = TOTAL_DURATION - HINT_DELAY - EXIT_DURATION
 
+const clearAuth = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+}
+
+const parseUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null')
+  } catch (e) {
+    return null
+  }
+}
+
+const isTokenExpired = (token) => {
+  try {
+    const payloadPart = token.split('.')[1]
+    if (!payloadPart) return true
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=')
+    const payload = JSON.parse(decodeURIComponent(escape(atob(padded))))
+    return payload.exp && payload.exp * 1000 <= Date.now()
+  } catch (e) {
+    return true
+  }
+}
+
+const getNextRouteAfterSplash = () => {
+  const token = localStorage.getItem('token')
+  const user = parseUser()
+
+  if (!token || !user || isTokenExpired(token)) {
+    clearAuth()
+    return '/welcome'
+  }
+
+  return user.role >= 1 ? '/admin/dashboard' : '/errands'
+}
+
 // 品牌星环：保留球形高级感，但控制密度和亮度，避免盖过中心 logo。
 const initParticles = () => {
   const canvas = canvasEl.value
@@ -214,9 +252,9 @@ onMounted(() => {
       isLeaving.value = true
     }, TOTAL_DURATION - EXIT_DURATION)
 
-    // 启动动画结束后跳转到 Welcome
+    // 启动动画结束后再根据登录状态进入对应页面。
     routeTimer = setTimeout(() => {
-      router.replace('/welcome')
+      router.replace(getNextRouteAfterSplash())
     }, TOTAL_DURATION)
   }, START_DELAY)
 })

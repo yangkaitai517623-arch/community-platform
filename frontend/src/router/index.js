@@ -194,14 +194,9 @@ router.beforeEach((to, from, next) => {
   const user = parseUser()
   const isPublicPage = publicPages.includes(to.path)
 
-  // 根路径特殊处理：根据登录状态跳转
+  // 根路径固定进入启动页，启动动画结束后再按登录状态跳转。
   if (to.path === '/') {
-    if (!token || !user || isTokenExpired(token)) {
-      clearAuth()
-      next('/splash')
-    } else {
-      next(user.role >= 1 ? '/admin/dashboard' : '/errands')
-    }
+    next('/splash')
     return
   }
 
@@ -215,7 +210,7 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  if (to.path === '/splash' || to.path === '/welcome' || to.path === '/login' || to.path === '/register') {
+  if (to.path === '/login' || to.path === '/register') {
     next(user.role >= 1 ? '/admin/dashboard' : '/errands')
   } else if (to.meta.role === 'admin' && user.role < 1) {
     next('/errands')

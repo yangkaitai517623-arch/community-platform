@@ -18,15 +18,37 @@
 
 ## 项目截图
 
-截图可以放在 `docs/screenshots/` 目录下，然后在 README 中引用，例如：
+### 启动与介绍页
 
-```md
-![启动页](docs/screenshots/splash.png)
-![后台仪表盘](docs/screenshots/admin-dashboard.png)
-![跑腿服务](docs/screenshots/errand.png)
-```
+| 启动页 | 平台介绍页 |
+| --- | --- |
+| ![启动页](docs/screenshots/splash.png) | ![平台介绍页](docs/screenshots/welcome.png) |
 
-建议优先补充这些页面截图：启动页、介绍页、登录页、用户端跑腿/检修页、二手交易页、论坛页、后台仪表盘、后台订单管理页。
+### 登录注册
+
+| 登录页 | 注册页 |
+| --- | --- |
+| ![登录页](docs/screenshots/login.png) | ![注册页](docs/screenshots/register.png) |
+
+### 用户端页面
+
+| 用户端服务列表 | AI 智能辅助 |
+| --- | --- |
+| ![用户端服务列表](docs/screenshots/user.png) | ![AI 智能辅助](docs/screenshots/ai.png) |
+
+| 评论互动 | 个人中心 |
+| --- | --- |
+| ![评论互动](docs/screenshots/comment.png) | ![个人中心](docs/screenshots/personal.png) |
+
+### 后台管理端
+
+| 后台数据概览 | 后台业务管理 |
+| --- | --- |
+| ![后台数据概览](docs/screenshots/admin.png) | ![后台业务管理](docs/screenshots/manage.png) |
+
+| 管理端修订页面 |
+| --- |
+| ![管理端修订页面](docs/screenshots/admin%20revise.png) |
 
 ## 技术栈
 
