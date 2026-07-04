@@ -14,9 +14,9 @@
       <article class="u-card post" v-for="item in posts" :key="item.id">
         <span class="u-pin forum"></span>
         <div class="post-head">
-          <div class="avatar">{{ item.authorName?.[0] || '邻' }}</div>
+          <div class="avatar">{{ getAuthorInitial(item) }}</div>
           <div class="post-meta">
-            <span class="author">{{ item.authorName || '邻居' }}</span>
+            <span class="author">{{ getAuthorName(item) }}</span>
             <span class="time tabular">{{ item.createdAt }}</span>
           </div>
         </div>
@@ -98,6 +98,12 @@ const currentPost = ref(null)
 const commentContent = ref('')
 
 const publishForm = reactive({ title: '', content: '' })
+
+const getAuthorName = (post) => post?.authorName || (post?.userId ? `用户 #${post.userId}` : '未知用户')
+const getAuthorInitial = (post) => {
+  const name = getAuthorName(post)
+  return name?.[0] || '?'
+}
 
 const fetchPosts = async () => {
   try {

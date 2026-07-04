@@ -31,8 +31,13 @@
             <span class="row-title">{{ row.title }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="userId" label="发布者" width="100">
-          <template #default="{ row }"><span class="muted font-mono"># {{ row.userId }}</span></template>
+        <el-table-column prop="authorName" label="发布者" width="150">
+          <template #default="{ row }">
+            <div class="author-cell">
+              <span class="author-name">{{ getAuthorName(row) }}</span>
+              <span class="muted font-mono"># {{ row.userId || '—' }}</span>
+            </div>
+          </template>
         </el-table-column>
         <el-table-column prop="viewCount" label="浏览" width="90" align="right">
           <template #default="{ row }"><span class="font-mono tabular">{{ row.viewCount || 0 }}</span></template>
@@ -78,7 +83,7 @@
     <el-dialog v-model="dialogVisible" title="帖子详情" width="720px">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="帖子标题" :span="2">{{ currentRow.title }}</el-descriptions-item>
-        <el-descriptions-item label="发布者 ID">{{ currentRow.userId }}</el-descriptions-item>
+        <el-descriptions-item label="发布者">{{ getAuthorName(currentRow) }}（ID: {{ currentRow.userId || '—' }}）</el-descriptions-item>
         <el-descriptions-item label="状态">{{ getStatusText(currentRow.status) }}</el-descriptions-item>
         <el-descriptions-item label="浏览数">{{ currentRow.viewCount }}</el-descriptions-item>
         <el-descriptions-item label="评论数">{{ currentRow.commentCount }}</el-descriptions-item>
@@ -110,6 +115,7 @@ const currentRow = ref({})
 const getStatusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'info' }[s] || 'info')
 const getStatusText = (s) => ({ 0: '审核中', 1: '已发布', 2: '已下架' }[s] || '—')
 const statusMap = { 'pending': 0, 'published': 1, 'off_shelf': 2 }
+const getAuthorName = (row) => row?.authorName || (row?.userId ? `用户 #${row.userId}` : '未知用户')
 
 const loadData = async () => {
   loading.value = true
@@ -173,6 +179,8 @@ onMounted(() => loadData())
 
 <style scoped>
 .row-title { font-family: var(--font-display); font-weight: 600; font-size: 14px; color: var(--admin-ink); }
+.author-cell { display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+.author-name { font-weight: 600; color: var(--admin-ink); font-size: 13px; }
 .muted { color: var(--admin-muted); }
 .font-mono { font-family: var(--font-mono); font-size: 13px; }
 .post-content {

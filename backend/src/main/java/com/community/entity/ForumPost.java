@@ -47,4 +47,10 @@ public class ForumPost {
      */
     @TableField(exist = false)
     private Boolean liked;
+
+    /**
+     * 发帖人展示名，仅用于接口返回。
+     */
+    @TableField(exist = false)
+    private String authorName;
 }

@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,7 @@ public class ForumService {
                 .orderByDesc(ForumPost::getCreatedAt);
 
         IPage<ForumPost> pageResult = forumPostMapper.selectPage(new Page<>(page, size), wrapper);
+        fillAuthorNames(pageResult.getRecords());
         for (ForumPost post : pageResult.getRecords()) {
             post.setCommentCount(forumCommentMapper.countPublishedByPostId(post.getId()));
             post.setLiked(userId != null && forumLikeMapper.countByPostIdAndUserId(post.getId(), userId) > 0);
@@ -55,6 +58,7 @@ public class ForumService {
     public ForumPost getPostById(Long id, Long userId) {
         ForumPost post = forumPostMapper.selectById(id);
         if (post != null) {
+            fillAuthorName(post);
             post.setLiked(userId != null && forumLikeMapper.countByPostIdAndUserId(post.getId(), userId) > 0);
             int viewCount = post.getViewCount() == null ? 0 : post.getViewCount();
             post.setViewCount(viewCount + 1);
@@ -117,6 +121,43 @@ public class ForumService {
         data.put("likeCount", likeCount == null ? 0 : likeCount);
         data.put("liked", liked);
         return data;
+    }
+
+    private void fillAuthorNames(List<ForumPost> posts) {
+        if (posts == null || posts.isEmpty()) {
+            return;
+        }
+        List<Long> userIds = posts.stream()
+                .map(ForumPost::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (userIds.isEmpty()) {
+            return;
+        }
+        Map<Long, String> authorNameMap = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, this::getUserDisplayName));
+        for (ForumPost post : posts) {
+            post.setAuthorName(authorNameMap.get(post.getUserId()));
+        }
+    }
+
+    private void fillAuthorName(ForumPost post) {
+        if (post == null || post.getUserId() == null) {
+            return;
+        }
+        SysUser user = userMapper.selectById(post.getUserId());
+        post.setAuthorName(user == null ? null : getUserDisplayName(user));
+    }
+
+    private String getUserDisplayName(SysUser user) {
+        if (user == null) {
+            return null;
+        }
+        if (user.getRealName() != null && !user.getRealName().isBlank()) {
+            return user.getRealName();
+        }
+        return user.getUsername();
     }
 
     /**

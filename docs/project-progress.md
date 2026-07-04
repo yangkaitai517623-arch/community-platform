@@ -805,3 +805,24 @@
 验证：
 - 前端执行 `npm.cmd run build` 通过。
 - 构建仍有历史 Rollup 注释提示和大 chunk warning，不影响本次页面运行。
+
+### 2026-07-04：论坛帖子显示真实发布者
+
+发现问题：
+- 用户端社区论坛列表中，帖子发布者在接口未返回作者名时会显示为“邻居”，无法看出具体是谁发的帖子。
+- 后台资讯论坛管理页也主要显示发布者 ID，可读性不足。
+
+完成：
+- `ForumPost` 新增非数据库字段 `authorName`，用于接口返回发帖人展示名。
+- `ForumService.listPosts()` 和 `ForumService.getPostById()` 根据 `userId` 补充发帖人姓名，优先使用 `realName`，没有实名时使用 `username`。
+- 后台 `AdminForumController` 列表接口同样补充 `authorName`。
+- 用户端 `Forum.vue` 从 `authorName` 显示发帖人，接口异常缺失时兜底为 `用户 #ID`，不再显示泛化的“邻居”。
+- 后台 `admin/Forum.vue` 发布者列改为展示“姓名 + ID”，帖子详情也显示发布者姓名。
+
+业务效果：
+- 居民浏览论坛时可以知道帖子由谁发布，互动关系更清晰。
+- 管理员审核、下架和删除帖子时可以快速识别发布者，减少只看 ID 的维护成本。
+
+验证：
+- 前端执行 `npm.cmd run build` 通过。
+- 后端完整 Maven 编译仍需在 IDEA 或本机 Maven 中验证。

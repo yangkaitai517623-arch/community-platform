@@ -4,13 +4,18 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.community.dto.Result;
 import com.community.entity.ForumPost;
+import com.community.entity.SysUser;
 import com.community.repository.ForumPostMapper;
+import com.community.repository.SysUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/forum")
@@ -18,6 +23,7 @@ import java.util.Map;
 public class AdminForumController {
 
     private final ForumPostMapper postMapper;
+    private final SysUserMapper userMapper;
 
     @GetMapping
     public Result<Map<String, Object>> listPosts(
@@ -38,6 +44,7 @@ public class AdminForumController {
         wrapper.orderByDesc(ForumPost::getCreatedAt);
 
         Page<ForumPost> pageResult = postMapper.selectPage(new Page<>(page, size), wrapper);
+        fillAuthorNames(pageResult.getRecords());
 
         Map<String, Object> result = new HashMap<>();
         result.put("records", pageResult.getRecords());
@@ -66,5 +73,34 @@ public class AdminForumController {
     public Result<Void> deletePost(@PathVariable Long id) {
         postMapper.deleteById(id);
         return Result.success("删除成功", null);
+    }
+
+    private void fillAuthorNames(List<ForumPost> posts) {
+        if (posts == null || posts.isEmpty()) {
+            return;
+        }
+        List<Long> userIds = posts.stream()
+                .map(ForumPost::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (userIds.isEmpty()) {
+            return;
+        }
+        Map<Long, String> authorNameMap = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, this::getUserDisplayName));
+        for (ForumPost post : posts) {
+            post.setAuthorName(authorNameMap.get(post.getUserId()));
+        }
+    }
+
+    private String getUserDisplayName(SysUser user) {
+        if (user == null) {
+            return null;
+        }
+        if (user.getRealName() != null && !user.getRealName().isBlank()) {
+            return user.getRealName();
+        }
+        return user.getUsername();
     }
 }
