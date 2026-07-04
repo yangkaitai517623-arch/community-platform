@@ -1,16 +1,8 @@
 <template>
   <div class="welcome" aria-label="青青社区便民服务平台介绍页">
-    <!-- Lightfall 背景画布 -->
-    <canvas ref="lightfallCanvasEl" class="lightfall-canvas" aria-hidden="true"></canvas>
-
-    <!-- 粒子星群画布 -->
-    <canvas ref="canvasEl" class="particle-canvas" aria-hidden="true"></canvas>
-
-    <!-- 暗角与光晕 -->
-    <div class="lightfall-field"></div>
+    <!-- 社区调度背景 -->
+    <div class="star-field"></div>
     <div class="vignette"></div>
-    <div class="glow glow-amber"></div>
-    <div class="glow glow-red"></div>
 
     <!-- 顶部细栏 -->
     <header class="top-rail" :class="{ show: mounted }">
@@ -142,13 +134,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Bike, Wrench, Package, MessagesSquare, ArrowRight } from 'lucide-vue-next'
 
 const router = useRouter()
-const lightfallCanvasEl = ref(null)
-const canvasEl = ref(null)
 const mounted = ref(false)
 
 const services = [
@@ -183,323 +173,11 @@ const resetServiceGlow = (event) => {
   event.currentTarget.style.setProperty('--edge-proximity', '0')
 }
 
-/* ---------- 粒子星群 ---------- */
-let ctx = null
-let rafId = null
-let particles = []
-let width = 0
-let height = 0
-let dpr = 1
-const mouse = { x: -9999, y: -9999 }
-let running = true
-
-const COLORS = ['82,39,255', '255,159,252', '56,189,248', '250,247,238']
-
-/* ---------- 社区服务路线背景 ---------- */
-let lightfallCtx = null
-let lightfallStreaks = []
-let lightfallDust = []
-let lightfallWidth = 0
-let lightfallHeight = 0
-let lightfallDpr = 1
-
-const LIGHTFALL_COLORS = [
-  [110, 168, 254],
-  [148, 163, 255],
-  [255, 159, 252],
-  [241, 184, 91]
-]
-
-const contentShield = (x, y) => {
-  if (!lightfallWidth || !lightfallHeight) return 1
-  const nx = (x - lightfallWidth * 0.5) / (lightfallWidth * 0.31)
-  const ny = (y - lightfallHeight * 0.5) / (lightfallHeight * 0.36)
-  const d = nx * nx + ny * ny
-  if (d < 1) return 0.12
-  if (d < 1.8) return 0.34
-  return 1
-}
-
-const edgeWeightedX = () => {
-  if (!lightfallWidth) return 0
-  if (Math.random() < 0.88) {
-    const leftSide = Math.random() < 0.5
-    const min = leftSide ? -0.10 : 0.78
-    const max = leftSide ? 0.22 : 1.10
-    return lightfallWidth * (min + Math.random() * (max - min))
-  }
-  return Math.random() * lightfallWidth
-}
-
-const initLightfall = () => {
-  const canvas = lightfallCanvasEl.value
-  if (!canvas) return
-  lightfallCtx = canvas.getContext('2d')
-  lightfallDpr = Math.min(window.devicePixelRatio || 1, 2)
-  resizeLightfall()
-
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const area = lightfallWidth * lightfallHeight
-  const streakCount = reduce ? 8 : Math.max(18, Math.min(34, Math.round(area / 52000)))
-  const dustCount = reduce ? 70 : Math.max(110, Math.min(190, Math.round(area / 13000)))
-
-  lightfallStreaks = Array.from({ length: streakCount }, () => newLightfallStreak(true))
-  lightfallDust = Array.from({ length: dustCount }, () => {
-    const color = LIGHTFALL_COLORS[Math.floor(Math.random() * LIGHTFALL_COLORS.length)]
-    return {
-      x: Math.random() * lightfallWidth,
-      y: Math.random() * lightfallHeight,
-      r: Math.random() * 1.15 + 0.28,
-      alpha: Math.random() * 0.30 + 0.08,
-      twinkle: Math.random() * Math.PI * 2,
-      color
-    }
-  })
-}
-
-const newLightfallStreak = (initial = false) => {
-  const color = LIGHTFALL_COLORS[Math.floor(Math.random() * LIGHTFALL_COLORS.length)]
-  const length = Math.random() * 150 + 110
-  return {
-    x: edgeWeightedX(),
-    y: initial ? Math.random() * lightfallHeight : -length - Math.random() * 160,
-    length,
-    speed: Math.random() * 0.26 + 0.10,
-    width: Math.random() * 0.54 + 0.28,
-    tilt: Math.random() * 16 + 7,
-    alpha: Math.random() * 0.20 + 0.08,
-    phase: Math.random() * Math.PI * 2,
-    color
-  }
-}
-
-const resizeLightfall = () => {
-  const canvas = lightfallCanvasEl.value
-  if (!canvas || !lightfallCtx) return
-  lightfallWidth = canvas.clientWidth
-  lightfallHeight = canvas.clientHeight
-  canvas.width = lightfallWidth * lightfallDpr
-  canvas.height = lightfallHeight * lightfallDpr
-  lightfallCtx.setTransform(lightfallDpr, 0, 0, lightfallDpr, 0, 0)
-}
-
-const drawLightfall = (now = performance.now()) => {
-  if (!lightfallCtx) return
-  const ctx = lightfallCtx
-  const t = now * 0.001
-  ctx.clearRect(0, 0, lightfallWidth, lightfallHeight)
-
-  const bg = ctx.createLinearGradient(0, 0, lightfallWidth, lightfallHeight)
-  bg.addColorStop(0, '#071226')
-  bg.addColorStop(0.46, '#0A1530')
-  bg.addColorStop(1, '#050814')
-  ctx.fillStyle = bg
-  ctx.fillRect(0, 0, lightfallWidth, lightfallHeight)
-
-  const ambient = ctx.createRadialGradient(
-    lightfallWidth * 0.5,
-    lightfallHeight * 0.38,
-    0,
-    lightfallWidth * 0.5,
-    lightfallHeight * 0.38,
-    Math.max(lightfallWidth, lightfallHeight) * 0.78
-  )
-  ambient.addColorStop(0, 'rgba(56, 189, 248, 0.12)')
-  ambient.addColorStop(0.36, 'rgba(82, 39, 255, 0.10)')
-  ambient.addColorStop(0.72, 'rgba(255, 159, 252, 0.045)')
-  ambient.addColorStop(1, 'rgba(0, 0, 0, 0)')
-  ctx.fillStyle = ambient
-  ctx.fillRect(0, 0, lightfallWidth, lightfallHeight)
-
-  ctx.globalCompositeOperation = 'lighter'
-  for (const dust of lightfallDust) {
-    const [r, g, b] = dust.color
-    const pulse = 0.62 + Math.sin(t * 1.5 + dust.twinkle) * 0.38
-    const shield = contentShield(dust.x, dust.y)
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${dust.alpha * pulse * shield})`
-    ctx.beginPath()
-    ctx.arc(dust.x, dust.y, dust.r, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  for (const streak of lightfallStreaks) {
-    const [r, g, b] = streak.color
-    const sway = Math.sin(t + streak.phase) * 10
-    const tailX = streak.x - streak.tilt + sway
-    const tailY = streak.y - streak.length
-    const headX = streak.x + sway * 0.25
-    const headY = streak.y
-    const shield = Math.min(
-      contentShield(headX, headY),
-      contentShield((tailX + headX) * 0.5, (tailY + headY) * 0.5)
-    )
-    const gradient = ctx.createLinearGradient(tailX, tailY, headX, headY)
-    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`)
-    gradient.addColorStop(0.72, `rgba(${r}, ${g}, ${b}, ${streak.alpha * 0.42 * shield})`)
-    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${streak.alpha * 0.72 * shield})`)
-    ctx.strokeStyle = gradient
-    ctx.lineWidth = streak.width
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    ctx.moveTo(tailX, tailY)
-    ctx.lineTo(headX, headY)
-    ctx.stroke()
-
-    streak.y += streak.speed
-    streak.x += Math.sin(t * 0.6 + streak.phase) * 0.08
-    if (streak.y - streak.length > lightfallHeight + 80) {
-      Object.assign(streak, newLightfallStreak(false))
-    }
-  }
-
-  const mouseGlow = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 260)
-  mouseGlow.addColorStop(0, 'rgba(110, 168, 254, 0.10)')
-  mouseGlow.addColorStop(0.45, 'rgba(255, 159, 252, 0.045)')
-  mouseGlow.addColorStop(1, 'rgba(0, 0, 0, 0)')
-  ctx.fillStyle = mouseGlow
-  ctx.fillRect(0, 0, lightfallWidth, lightfallHeight)
-  ctx.globalCompositeOperation = 'source-over'
-}
-
-const initParticles = () => {
-  const canvas = canvasEl.value
-  if (!canvas) return
-  ctx = canvas.getContext('2d')
-  dpr = Math.min(window.devicePixelRatio || 1, 2)
-  resize()
-
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const area = width * height
-  // 密度自适应，桌面多、手机少，reduced-motion 时更少
-  let count = Math.round(area / 14000)
-  count = Math.max(28, Math.min(count, reduce ? 40 : 120))
-
-  particles = Array.from({ length: count }, () => {
-    const speed = reduce ? 0.08 : 0.35
-    return {
-      x: Math.random() * width,
-      y: Math.random() * height,
-      vx: (Math.random() - 0.5) * speed,
-      vy: (Math.random() - 0.5) * speed,
-      r: Math.random() * 1.6 + 0.6,
-      c: COLORS[Math.floor(Math.random() * COLORS.length)],
-      a: Math.random() * 0.5 + 0.3
-    }
-  })
-}
-
-const resize = () => {
-  const canvas = canvasEl.value
-  if (!canvas || !ctx) return
-  width = canvas.clientWidth
-  height = canvas.clientHeight
-  canvas.width = width * dpr
-  canvas.height = height * dpr
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-}
-
-const draw = () => {
-  if (!ctx) return
-  ctx.clearRect(0, 0, width, height)
-
-  const linkDist = 130
-  for (let i = 0; i < particles.length; i++) {
-    const p = particles[i]
-
-    // 运动
-    p.x += p.vx
-    p.y += p.vy
-
-    // 鼠标轻微聚拢
-    const mdx = mouse.x - p.x
-    const mdy = mouse.y - p.y
-    const md2 = mdx * mdx + mdy * mdy
-    if (md2 < 140 * 140) {
-      const f = (1 - Math.sqrt(md2) / 140) * 0.02
-      p.vx += mdx * f * 0.02
-      p.vy += mdy * f * 0.02
-    }
-
-    // 阻尼与限速
-    p.vx *= 0.995
-    p.vy *= 0.995
-
-    // 边界回弹
-    if (p.x < 0 || p.x > width) p.vx *= -1
-    if (p.y < 0 || p.y > height) p.vy *= -1
-    p.x = Math.max(0, Math.min(width, p.x))
-    p.y = Math.max(0, Math.min(height, p.y))
-
-    // 连线
-    for (let j = i + 1; j < particles.length; j++) {
-      const q = particles[j]
-      const dx = p.x - q.x
-      const dy = p.y - q.y
-      const d2 = dx * dx + dy * dy
-      if (d2 < linkDist * linkDist) {
-        const alpha = (1 - Math.sqrt(d2) / linkDist) * 0.08
-        ctx.strokeStyle = `rgba(180,151,207,${alpha})`
-        ctx.lineWidth = 0.6
-        ctx.beginPath()
-        ctx.moveTo(p.x, p.y)
-        ctx.lineTo(q.x, q.y)
-        ctx.stroke()
-      }
-    }
-
-    // 粒子
-    ctx.beginPath()
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(${p.c},${p.a * 0.72})`
-    ctx.fill()
-  }
-}
-
-const loop = () => {
-  if (running) {
-    drawLightfall()
-    draw()
-  }
-  rafId = requestAnimationFrame(loop)
-}
-
-const onMouseMove = (e) => {
-  const rect = canvasEl.value?.getBoundingClientRect()
-  if (!rect) return
-  mouse.x = e.clientX - rect.left
-  mouse.y = e.clientY - rect.top
-}
-const onMouseLeave = () => { mouse.x = -9999; mouse.y = -9999 }
-const onResize = () => {
-  resizeLightfall()
-  initLightfall()
-  resize()
-  initParticles()
-}
-const onVisibility = () => { running = !document.hidden }
-
 onMounted(() => {
-  initLightfall()
-  initParticles()
-  loop()
-
-  window.addEventListener('resize', onResize)
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseleave', onMouseLeave)
-  document.addEventListener('visibilitychange', onVisibility)
-
   // 入场序列
   requestAnimationFrame(() => {
     mounted.value = true
   })
-})
-
-onBeforeUnmount(() => {
-  cancelAnimationFrame(rafId)
-  window.removeEventListener('resize', onResize)
-  window.removeEventListener('mousemove', onMouseMove)
-  window.removeEventListener('mouseleave', onMouseLeave)
-  document.removeEventListener('visibilitychange', onVisibility)
 })
 </script>
 
@@ -508,85 +186,93 @@ onBeforeUnmount(() => {
   position: relative;
   min-height: 100dvh;
   overflow: hidden;
-  background: #050814;
+  background: #101B2D;
   color: #FAF7EE;
   font-family: var(--font-body);
   isolation: isolate;
 }
 
-/* Lightfall 背景 */
+/* 青墨蓝社区夜景：稳重、可信，弱化星空和科技感 */
 .welcome::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 920px 620px at 50% 42%, rgba(56, 189, 248, 0.11) 0%, rgba(82, 39, 255, 0.07) 38%, transparent 72%),
-    radial-gradient(ellipse 760px 540px at 78% 70%, rgba(255, 159, 252, 0.055) 0%, transparent 62%),
-    radial-gradient(ellipse 620px 460px at 18% 72%, rgba(110, 168, 254, 0.06) 0%, transparent 62%),
-    radial-gradient(ellipse 1200px 820px at 50% -8%, #16213d 0%, #0b1530 48%, #050814 100%);
-  animation: lightfall-drift 30s ease-in-out infinite;
+    radial-gradient(ellipse 58% 46% at 50% 42%, rgba(255,255,255,0.045), rgba(255,255,255,0) 68%),
+    radial-gradient(ellipse 42% 30% at 50% 100%, rgba(214,161,92,0.080), rgba(214,161,92,0) 72%),
+    linear-gradient(180deg, #13233A 0%, #101B2D 42%, #0B1320 100%);
   pointer-events: none;
   z-index: 0;
 }
-/* 星星点点 */
+
+/* 极少量冷白细点，只做空气感，不把页面拉回星空主题 */
 .welcome::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1px 1px at 50% 50%, rgba(255,255,255,0.5), transparent),
-    radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(2px 2px at 33% 50%, rgba(255,255,255,0.2), transparent),
-    radial-gradient(2px 2px at 75% 33%, rgba(255,255,255,0.2), transparent),
-    radial-gradient(1px 1px at 10% 60%, rgba(255,255,255,0.35), transparent);
-  background-size: 200% 200%, 200% 200%, 300% 300%, 250% 250%, 200% 200%, 400% 400%, 300% 300%, 250% 250%;
-  background-position: 0% 0%;
-  animation: stars-twinkle 14s ease-in-out infinite;
+  left: 4%;
+  top: 7%;
+  width: 1px;
+  height: 1px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.30);
+  box-shadow:
+    136px 84px 0 0 rgba(255,255,255,0.20),
+    316px 32px 0 0 rgba(255,255,255,0.28),
+    526px 132px 0 0 rgba(255,255,255,0.18),
+    748px 78px 0 0 rgba(255,255,255,0.22),
+    984px 156px 0 0 rgba(255,255,255,0.20),
+    1264px 54px 0 0 rgba(255,255,255,0.26),
+    1486px 224px 0 0 rgba(255,255,255,0.16),
+    78px 332px 0 0 rgba(255,255,255,0.18),
+    472px 362px 0 0 rgba(255,255,255,0.18),
+    946px 408px 0 0 rgba(255,255,255,0.20),
+    1178px 548px 0 0 rgba(255,255,255,0.24),
+    164px 690px 0 0 rgba(255,255,255,0.20),
+    686px 702px 0 0 rgba(255,255,255,0.24),
+    1222px 736px 0 0 rgba(255,255,255,0.22);
   pointer-events: none;
-  opacity: 0.16;
+  opacity: 0.72;
   z-index: 1;
 }
-@keyframes lightfall-drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-30px, 20px) scale(1.05); }
-  66% { transform: translate(20px, -30px) scale(0.95); }
-}
-@keyframes stars-twinkle {
-  0%, 100% { opacity: 0.16; background-position: 0% 0%; }
-  50% { opacity: 0.24; background-position: 100% 100%; }
-}
 
-.lightfall-field {
+.star-field {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: 0;
-}
-
-/* 画布 */
-.lightfall-canvas,
-.particle-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.lightfall-canvas {
-  z-index: 0;
-  opacity: 0.72;
-  filter: saturate(1.05) contrast(1.04);
-}
-
-.particle-canvas {
   z-index: 1;
-  opacity: 0.08;
-  mix-blend-mode: screen;
+  opacity: 1;
+}
+
+.star-field::before,
+.star-field::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.star-field::before {
+  left: clamp(24px, 8vw, 120px);
+  right: clamp(24px, 8vw, 120px);
+  bottom: clamp(18px, 4vw, 58px);
+  height: clamp(110px, 18vh, 180px);
+  background:
+    linear-gradient(90deg, transparent 0 4%, rgba(255,255,255,0.035) 4% 4.16%, transparent 4.16% 14%, rgba(214,161,92,0.16) 14% 14.18%, transparent 14.18% 28%, rgba(255,255,255,0.040) 28% 28.14%, transparent 28.14% 43%, rgba(214,161,92,0.13) 43% 43.18%, transparent 43.18% 58%, rgba(255,255,255,0.034) 58% 58.14%, transparent 58.14% 74%, rgba(214,161,92,0.14) 74% 74.18%, transparent 74.18% 92%, rgba(255,255,255,0.032) 92% 92.14%, transparent 92.14%),
+    linear-gradient(180deg, transparent 0 28%, rgba(255,255,255,0.026) 28% 28.7%, transparent 28.7% 52%, rgba(255,255,255,0.022) 52% 52.7%, transparent 52.7% 76%, rgba(255,255,255,0.018) 76% 76.7%, transparent 76.7%),
+    linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0));
+  border-bottom: 1px solid rgba(255,255,255,0.035);
+  opacity: 0.58;
+}
+
+.star-field::after {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34vh;
+  background:
+    radial-gradient(ellipse 42% 28% at 50% 100%, rgba(214,161,92,0.080), rgba(214,161,92,0) 72%),
+    linear-gradient(180deg, rgba(11,19,32,0), rgba(11,19,32,0.68));
+  opacity: 0.92;
 }
 
 /* 暗角 */
@@ -594,40 +280,11 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
   background:
-    radial-gradient(ellipse 62% 56% at 50% 44%, transparent 28%, rgba(5,8,20,0.22) 62%, rgba(3,5,12,0.64) 100%),
-    linear-gradient(180deg, rgba(5,8,20,0.12), transparent 24%, transparent 72%, rgba(3,5,12,0.36));
-}
-
-/* 光晕 */
-.glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  opacity: 0.34;
-  z-index: 1;
-}
-.glow-amber {
-  width: 420px; height: 420px;
-  background: radial-gradient(circle, rgba(56,189,248,0.18) 0%, transparent 70%);
-  top: -140px; right: -90px;
-  animation: float-a 14s ease-in-out infinite;
-}
-.glow-red {
-  width: 360px; height: 360px;
-  background: radial-gradient(circle, rgba(255,159,252,0.14) 0%, transparent 70%);
-  bottom: -120px; left: -60px;
-  animation: float-b 18s ease-in-out infinite;
-}
-@keyframes float-a {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(-40px, 40px); }
-}
-@keyframes float-b {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(40px, -30px); }
+    radial-gradient(ellipse 78% 64% at 50% 42%, transparent 0 58%, rgba(6,13,24,0.10) 84%, rgba(6,12,22,0.24) 100%),
+    linear-gradient(90deg, rgba(6,12,22,0.24), transparent 18% 82%, rgba(6,12,22,0.24)),
+    linear-gradient(180deg, rgba(255,255,255,0.018), transparent 20%, transparent 76%, rgba(6,12,22,0.20));
 }
 
 /* 顶部/底部细栏 */
@@ -638,7 +295,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 18px 30px;
-  z-index: 3;
+  z-index: 4;
   font-size: 12px;
   color: rgba(250,247,238,0.58);
   opacity: 0;
@@ -686,7 +343,7 @@ onBeforeUnmount(() => {
 /* 主舞台 */
 .stage {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -700,14 +357,13 @@ onBeforeUnmount(() => {
   content: '';
   position: absolute;
   left: 50%;
-  top: 47%;
-  width: min(820px, 90vw);
-  height: 440px;
+  top: 44%;
+  width: min(780px, 86vw);
+  height: 420px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background:
-    radial-gradient(ellipse at 50% 32%, rgba(56, 189, 248, 0.07) 0%, transparent 34%),
-    radial-gradient(ellipse at center, rgba(5, 8, 20, 0.32) 0%, rgba(5, 8, 20, 0.20) 48%, transparent 78%);
+    radial-gradient(ellipse at 50% 46%, rgba(23,38,58,0.42) 0%, rgba(23,38,58,0.22) 42%, transparent 72%);
   pointer-events: none;
   z-index: -1;
 }
@@ -1199,8 +855,8 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .glow-amber, .glow-red, .seal-ring, .seal-ring.ring-2, .enter-shine, .rail-dot,
-  .welcome::before, .welcome::after, .gradient-text, .svc::before {
+  .seal-ring, .seal-ring.ring-2, .enter-shine, .rail-dot,
+  .welcome::before, .welcome::after, .star-field::after, .gradient-text, .svc::before {
     animation: none !important;
   }
 }
